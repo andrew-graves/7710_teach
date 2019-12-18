@@ -1,0 +1,272 @@
+---
+title: "Lab 11"
+author: "Andrew Graves"
+date: "November 20/22 2019"
+output:
+  ioslides_presentation:
+    smaller: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE, fig.height = 4)
+```
+
+# Parametric statistical tests as linear models
+
+## Materials fully borrowed from: 
+
+*Common statistical tests are linear models (or: how to teach stats)*
+
+- Full credit to Jonas Kristoffer Lindelov for this post, although these statistical ideas are not new.
+
+**GitHub Post**
+
+- https://lindeloev.github.io/tests-as-linear/
+
+**Cheat Sheet**
+
+- https://lindeloev.github.io/tests-as-linear/linear_tests_cheat_sheet.pdf
+
+## The classic iris dataset
+
+```{r iris}
+library(tidyverse)
+theme_set(theme_bw())
+theme_update(text = element_text(family = "serif"), 
+axis.title.y = element_text(margin = margin(r = 20)))
+
+data("iris")
+str(iris)
+```
+
+## Statistical questions
+
+**One sample t-test**
+
+- Is versicolor petal width greater than 1.2 cm?
+
+**Independent samples t-test**
+
+- Is there a difference in sepal width between setosa and virginica?
+
+**Paired samples t-test**
+
+- Are the sepals longer than the petals?
+
+**One-way ANOVA**
+
+- Is there a difference in sepal length across the three species?
+
+**For all the following plots, blue lines are intercepts and red lines are slopes!**
+
+# One sample t-test
+
+## Is versicolor petal width greater than 1.2 cm?
+
+```{r one_sample_t1}
+one_samp_data <- iris %>%
+  filter(Species == "versicolor") %>%
+  select(Species, Petal.Width)
+```
+
+## One sample t.test function
+
+```{r one_sample_t2}
+t.test(one_samp_data$Petal.Width, mu = 1.2)
+```
+
+## Subtract comparison value from output vector for lm equivalent
+
+```{r one_sample_t3}
+one_samp_lm <- lm(one_samp_data$Petal.Width - 1.2 ~ 1)
+summary(one_samp_lm)
+```
+
+## Plot the one sample model
+
+```{r plot1}
+one_samp_plot <- one_samp_data %>%
+  ggplot(aes(x = Species, y = Petal.Width)) + 
+  geom_jitter(height = .1, width = 0, alpha = 0.5) +
+  geom_hline(yintercept = 1.2, lty = 2) + 
+  geom_segment(aes(x = .75, xend = 1.25, 
+              y = mean(one_samp_data$Petal.Width), 
+              yend = mean(one_samp_data$Petal.Width)), color = "blue")
+```
+
+## Print the one sample plot
+
+```{r one_samp_plot}
+print(one_samp_plot)
+```
+
+# Independent samples t-test
+
+## Is there a difference in sepal width between setosa and virginica?
+
+```{r ind_sample_t1}
+ind_samp_data <- iris %>%
+  filter(Species %in% c("setosa", "virginica")) %>%
+  select(Species, Sepal.Width)
+
+ind_samp_data_set <- ind_samp_data %>%
+  filter(Species == "setosa") %>%
+  select(Sepal.Width) %>%
+  pull()
+
+ind_samp_data_virg <- ind_samp_data %>%
+  filter(Species == "virginica") %>%
+  select(Sepal.Width) %>%
+  pull()
+```
+
+## Independent samples t.test function
+
+```{r ind_sample_t2}
+t.test(ind_samp_data_virg, ind_samp_data_set, var.equal = TRUE)
+```
+
+## Assume equal variance across groups for lm equivalent
+
+```{r ind_sample_t3}
+ind_samp_lm <- lm(Sepal.Width ~ Species, data = ind_samp_data)
+summary(ind_samp_lm)
+```
+
+## Plot the independent samples model
+
+```{r plot2}
+ind_samp_plot <- ind_samp_data %>%
+  ggplot(aes(x = Species, y = Sepal.Width, group = 1)) + 
+  geom_jitter(height = .1, width = 0, alpha = 0.5) +
+  stat_summary(fun.y = mean, geom = "line", color = "red") +
+  geom_segment(aes(x = .75, xend = 1.25, y = mean(ind_samp_data_set), 
+               yend = mean(ind_samp_data_set)), color = "blue")
+```
+
+## Print the independent samples plot
+
+```{r ind_samp_plot}
+print(ind_samp_plot)
+```
+
+# Paired samples t-test
+
+## Are the sepals longer than the petals?
+
+- Paired samples t.test function
+
+```{r pair_sample_t2}
+t.test(iris$Sepal.Length, iris$Petal.Length, paired = TRUE)
+```
+
+## Subtract one vector from the other as output for lm equivalent
+
+```{r pair_sample_t3}
+pair_samp_lm <- lm(Sepal.Length - Petal.Length ~ 1, data = iris)
+summary(pair_samp_lm)
+```
+
+## Plot paired data
+
+```{r plot3}
+paired_plot <- iris %>%
+  select(Sepal.Length, Petal.Length, Species) %>%
+  mutate(id = factor(1:nrow(iris))) %>%
+  gather(key = `Flower Attribute`, value = Measurement, -id, - Species) %>%
+  ggplot(aes(x = `Flower Attribute`, y = Measurement, group = id, color = id)) + 
+  geom_line() +
+  geom_jitter(height = .1, width = 0, alpha = 0.5) +
+  facet_grid(.~Species) + 
+  theme(legend.position = "none")
+```
+
+## Print the paired plot
+
+```{r paired_plot}
+print(paired_plot)
+```
+
+## Plot the paired samples model
+
+```{r plot4}
+add_length_diff <- iris %>%
+  mutate(`Length Difference` = Sepal.Length - Petal.Length)
+
+paired_samp_plot <- add_length_diff %>%
+  ggplot(aes(x = Species, y = `Length Difference`)) + 
+  geom_jitter(height = .1, width = 0, alpha = 0.5) +
+  geom_hline(yintercept = 0, lty = 2) + 
+ geom_segment(aes(x = .75, xend = 3.25, y = mean(add_length_diff$`Length Difference`), 
+ yend = mean(add_length_diff$`Length Difference`)), color = "blue")
+```
+
+## Print the paired-samples plot
+
+```{r paired_samp_plot}
+print(paired_samp_plot)
+```
+
+# One-way ANOVA
+
+## Is there a difference in sepal length across the three species?
+
+```{r anova_1}
+group_means <- iris %>%
+  group_by(Species) %>%
+  summarize(sep_length = mean(Sepal.Length))
+
+set_mean <- group_means %>%
+  filter(Species == "setosa") %>%
+  select(sep_length) %>%
+  pull()
+
+vers_mean <- group_means %>%
+  filter(Species == "versicolor") %>%
+  select(sep_length) %>%
+  pull()
+
+virg_mean <- group_means %>%
+  filter(Species == "virginica") %>%
+  select(sep_length) %>%
+  pull()
+```
+
+## One-way ANOVA aov function
+
+```{r anova_2}
+anova_aov <- aov(Sepal.Length ~ Species, data = iris)
+summary(anova_aov)
+```
+
+## Setup is similar for lm equivalent
+
+```{r anova_3}
+anova_lm <- lm(Sepal.Length ~ Species, data = iris)
+summary(anova_lm)
+```
+
+## Plot the one-way ANOVA model (w/ treatment contrasts!)
+
+```{r plot5}
+anova_plot <- iris %>%
+  ggplot(aes(x = Species, y = Sepal.Length)) + 
+  geom_jitter(height = .1, width = 0, alpha = 0.5) +
+  geom_segment(aes(x = .75, xend = 3.25, y = set_mean, yend = set_mean), color = "blue") + 
+  geom_segment(aes(x = 1, xend = 2, y = set_mean, yend = vers_mean), color = "red") +
+  geom_segment(aes(x = 2, xend = 3, y = set_mean, yend = virg_mean), color = "red")
+```
+
+## Print the one-way ANOVA plot (w/ treatment contrasts!)
+
+```{r anova_plot}
+print(anova_plot)
+```
+
+# Now it's your turn!
+
+Download the in-class activity and answer the questions as best you can. 
+
+Collaborate with your peers to write code. 
+
+I am available for programming questions.
