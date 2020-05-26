@@ -1,2 +1,3 @@
-# 7710_teach
-This includes my materials for teaching PSYC 7710 at the University of Virginia.
+# PSYC 7710: Quantitative Methods I: Probability and Statistical Inference
+
+- This repository contains RMarkdown lab materials I designed for this course at the University of Virginia. Materials including code, presentations, and activities.
