@@ -4,4 +4,4 @@
 
 #### University of Virginia, Fall 2019
 
-- Materials for different lap topics are nested within different folders.
+- Materials for different lap topics are nested within different folders. Both RMarkdown code and output formats (.pdf, .html, etc.) are included.
